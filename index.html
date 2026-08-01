@@ -245,6 +245,7 @@ footer a:hover{color:var(--acc)}
     <div class="logo"><span class="dot"></span>FLEX//OS <small>TOUCH THE FLOOR</small></div>
     <div class="hd-sp"></div>
     <button class="btn" id="btn-theme">◐ 昼夜</button>
+    <button class="btn" id="btn-beat" title="点击开关节拍 · 循环切换音效">♪ 关</button>
     <button class="btn" id="btn-refs">▤ 文献</button>
     <button class="btn" id="btn-export">⇩ 导出</button>
     <button class="btn" id="btn-import">⇧ 导入</button>
@@ -375,6 +376,50 @@ const REFS=[
 ];
 
 const TIERS={fast:{weeks:8,label:"乐观"},mid:{weeks:12,label:"基准"},slow:{weeks:17,label:"保守"}};
+
+// ---- 节拍器（每秒一声，方便默念数数）----
+const BEAT_ORDER=["off","bell","tick","wood"];
+const BEAT_LABEL={off:"关",bell:"钟声",tick:"滴答",wood:"木鱼"};
+let beatMode=localStorage.getItem("flexplan.beat")||"off";
+if(!BEAT_LABEL[beatMode])beatMode="off";
+let beatId=null,audioCtx=null;
+function beep(mode){
+  try{
+    if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==="suspended")audioCtx.resume();
+    const now=audioCtx.currentTime;
+    const mk=(type,freq,vol,dur,delay)=>{
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type=type;o.frequency.value=freq;
+      o.connect(g);g.connect(audioCtx.destination);
+      const t0=now+delay;
+      g.gain.setValueAtTime(vol,t0);
+      g.gain.exponentialRampToValueAtTime(0.001,t0+dur);
+      o.start(t0);o.stop(t0+dur+0.02);
+    };
+    if(mode==="bell"){mk("sine",440,0.5,0.6,0);mk("sine",880,0.18,0.4,0);mk("sine",220,0.2,0.8,0)}
+    else if(mode==="tick"){mk("square",1600,0.1,0.05,0)}
+    else if(mode==="wood"){mk("triangle",900,0.28,0.08,0)}
+  }catch(e){}
+}
+function updateBeatBtn(){
+  const b=document.getElementById("btn-beat");
+  if(b)b.textContent="♪ "+BEAT_LABEL[beatMode];
+}
+function beatTick(){if(beatMode!=="off")beep(beatMode)}
+document.getElementById("btn-beat").onclick=()=>{
+  const i=BEAT_ORDER.indexOf(beatMode);
+  beatMode=BEAT_ORDER[(i+1)%BEAT_ORDER.length];
+  localStorage.setItem("flexplan.beat",beatMode);
+  updateBeatBtn();
+  if(beatMode==="off"){
+    if(beatId){clearInterval(beatId);beatId=null}
+  }else{
+    if(!beatId)beatId=setInterval(beatTick,1000);
+    beep(beatMode);
+  }
+};
+updateBeatBtn();
 
 const TIMER_TOTAL=300;
 let timer={left:TIMER_TOTAL,running:false,id:null};
