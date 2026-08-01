@@ -377,16 +377,15 @@ const REFS=[
 const TIERS={fast:{weeks:8,label:"乐观"},mid:{weeks:12,label:"基准"},slow:{weeks:17,label:"保守"}};
 
 const TIMER_TOTAL=300;
-const TIMER_ICON='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9 2h6"/></svg>';
 let timer={left:TIMER_TOTAL,running:false,id:null};
 function timerText(s){const m=Math.floor(s/60),ss=s%60;return m+":"+String(ss).padStart(2,"0")}
 function renderTimer(){
   const b=document.getElementById("timer-btn");
   if(!b)return;
   b.classList.toggle("done",timer.left<=0&&!timer.running);
-  if(timer.left<=0&&!timer.running)b.innerHTML=TIMER_ICON+'<span>0:00 ✓ 再点重来</span>';
-  else if(timer.running)b.innerHTML=TIMER_ICON+'<span>'+timerText(timer.left)+' 暂停</span>';
-  else b.innerHTML=TIMER_ICON+'<span>'+timerText(timer.left)+(timer.left<TIMER_TOTAL?" 继续":" 开始")+'</span>';
+  if(timer.left<=0&&!timer.running)b.textContent="0:00 完成 · 再点重来";
+  else if(timer.running)b.textContent=timerText(timer.left)+" · 暂停";
+  else b.textContent=timerText(timer.left)+" · "+(timer.left<TIMER_TOTAL?"继续":"开始");
 }
 function initTimerUI(){
   const b=document.getElementById("timer-btn");
