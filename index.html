@@ -120,6 +120,8 @@ nav.tabs{display:flex;border-bottom:1px solid var(--line);margin-top:26px}
 .st-name{font-size:14px;font-weight:700;letter-spacing:.04em}
 .st-desc{font-size:12px;color:var(--tx2);margin-top:4px;line-height:1.65}
 .st-meta{font-size:10px;color:var(--tx3);margin-top:6px;letter-spacing:.12em;min-height:14px}
+.timer-btn{font-size:10px;padding:3px 10px;margin-left:8px;letter-spacing:.06em;text-transform:none;vertical-align:middle}
+.timer-btn.done{border-color:var(--acc);color:var(--acc)}
 .st-dose{flex:none;font-size:11px;color:var(--tx);border:1px solid var(--line2);padding:5px 10px;margin-top:2px;letter-spacing:.06em;white-space:nowrap}
 .step.done .st-dose{border-color:var(--line);color:var(--tx3)}
 
@@ -372,6 +374,37 @@ const REFS=[
 
 const TIERS={fast:{weeks:8,label:"乐观"},mid:{weeks:12,label:"基准"},slow:{weeks:17,label:"保守"}};
 
+const TIMER_TOTAL=300;
+let timer={left:TIMER_TOTAL,running:false,id:null};
+function timerText(s){const m=Math.floor(s/60),ss=s%60;return m+":"+String(ss).padStart(2,"0")}
+function renderTimer(){
+  const b=document.getElementById("timer-btn");
+  if(!b)return;
+  b.classList.toggle("done",timer.left<=0&&!timer.running);
+  if(timer.left<=0&&!timer.running)b.textContent="⏱ 0:00 ✓ 再点重来";
+  else if(timer.running)b.textContent="⏱ "+timerText(timer.left)+" 暂停";
+  else b.textContent="⏱ "+timerText(timer.left)+(timer.left<TIMER_TOTAL?" 继续":" 开始");
+}
+function initTimerUI(){
+  const b=document.getElementById("timer-btn");
+  if(!b)return;
+  b.onclick=e=>{
+    e.stopPropagation();
+    if(timer.running){clearInterval(timer.id);timer.id=null;timer.running=false}
+    else{
+      if(timer.left<=0)timer.left=TIMER_TOTAL;
+      timer.running=true;
+      timer.id=setInterval(()=>{
+        timer.left--;
+        if(timer.left<=0){clearInterval(timer.id);timer.id=null;timer.running=false;timer.left=0;renderTimer();toast("⏱ 热身完成！开始今天的拉伸吧");return}
+        renderTimer();
+      },1000);
+    }
+    renderTimer();
+  };
+  renderTimer();
+}
+
 let store=load();
 function load(){try{const r=localStorage.getItem(KEY);const o=r?JSON.parse(r):{days:{}};if(!o.meta)o.meta={baseline:null,tier:"mid"};return o}catch(e){return{days:{},meta:{baseline:null,tier:"mid"}}}}
 function save(){localStorage.setItem(KEY,JSON.stringify(store))}
@@ -414,7 +447,7 @@ function renderToday(){
       '<div class="st-idx">0'+(i+1)+'</div>'+
       '<div class="chk"><svg viewBox="0 0 24 24"><polyline points="4 13 10 19 20 6"/></svg></div>'+
       '<div class="st-body"><div class="st-name">'+s.name+'</div><div class="st-desc">'+s.desc+'</div>'+
-      '<div class="st-meta">'+(i===0?"⚠ 必须先热身":i===4?"★ PNF 收缩-放松 · 见效最快":"")+'</div></div>'+
+      '<div class="st-meta">'+(i===0?'⚠ 必须先热身 · <button class="btn timer-btn" id="timer-btn" type="button"></button>':i===4?"★ PNF 收缩-放松 · 见效最快":"")+'</div></div>'+
       '<div class="st-dose">'+s.dose+'</div>';
     el.onclick=()=>{
       day.checks[i]=!day.checks[i];save();
@@ -448,6 +481,7 @@ function renderToday(){
   const ni=document.getElementById("note-input");
   ni.value=day.note||"";
   ni.onchange=()=>{day.note=ni.value;save()};
+  initTimerUI();
 }
 function celebrate(){
   document.getElementById("cel-sub").textContent="DAY "+dayIndex(TODAY)+" 全部完成 —— 给未来的自己记一功";
