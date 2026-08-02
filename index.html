@@ -640,6 +640,8 @@ function ensureBaseline(){
   if(s.length){
     const first=store.days[s[0]].score;
     if(store.meta.baseline!==first){store.meta.baseline=first;save()}
+  }else if(store.meta.baseline!=null){
+    store.meta.baseline=null;save();
   }
 }
 function renderForecast(){
@@ -701,6 +703,7 @@ document.getElementById("file-import").onchange=e=>{
     const j=JSON.parse(r.result);
     const incoming=j.data&&j.data.days?j.data:(j.days?j:null);
     if(!incoming)throw 0;
+    const cleaned={};
     let cnt=0;
     Object.keys(incoming.days).forEach(dt=>{
       const nd=incoming.days[dt];
@@ -708,10 +711,12 @@ document.getElementById("file-import").onchange=e=>{
       nd.checks=STEPS.map((_,i)=>!!nd.checks[i]);
       nd.score=(nd.score===null||nd.score===undefined)?null:parseFloat(nd.score);
       nd.note=nd.note||"";
-      store.days[dt]=nd;cnt++;
+      cleaned[dt]=nd;cnt++;
     });
+    store.days=cleaned;
+    store.meta.baseline=null;
     save();renderToday();renderSide();
-    toast("导入成功 · "+cnt+" 天数据");
+    toast("导入成功 · 覆盖 "+cnt+" 天数据");
   }catch(err){toast("⚠ 导入失败：JSON 格式不正确")}};
   r.readAsText(f);e.target.value="";
 };
