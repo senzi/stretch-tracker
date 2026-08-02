@@ -626,8 +626,13 @@ function drawChart(dates){
       '<line x1="'+P+'" y1="'+ys(0)+'" x2="'+(W-P)+'" y2="'+ys(0)+'" stroke="'+acc+'" stroke-dasharray="5 6" opacity=".4"/>'+
       '<text x="'+P+'" y="'+(ys(0)-6)+'" text-anchor="start" fill="'+acc+'" font-size="10" font-family="monospace">0 = 触地</text>';
   }
-  const step=Math.max(1,Math.ceil(n/10));
-  const labels=dates.map((dt,i)=>(i%step===0||i===n-1)?'<text x="'+xs(i)+'" y="'+(H-8)+'" text-anchor="middle" fill="'+tx3+'" font-size="10" font-family="monospace">D'+i+'</text>':"").join("");
+  const labelStep=Math.max(1,Math.ceil(fcEnd/40));
+  const labels=Array.from({length:fcEnd+1},(_,i)=>{
+    if(i%labelStep!==0)return "";
+    const x=xs(i);
+    const s=String(i).padStart(3,"0");
+    return '<text x="'+x.toFixed(1)+'" y="'+(H-23)+'" text-anchor="middle" fill="'+tx3+'" font-size="7" font-family="monospace">'+s.split("").map((ch,j)=>'<tspan x="'+x.toFixed(1)+'" dy="'+(j===0?0:7)+'">'+ch+'</tspan>').join("")+'</text>';
+  }).join("");
   svg.innerHTML='<line x1="'+P+'" y1="'+(H-P)+'" x2="'+(W-P)+'" y2="'+(H-P)+'" stroke="'+line+'"/>'+cells+lineSvg+fc+labels;
 }
 function ensureBaseline(){
