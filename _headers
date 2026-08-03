@@ -1,0 +1,7 @@
+# 站点迭代频繁（训练打卡），HTML 每次重新验证（no-cache），确保部署后立即看到新版
+/index.html
+  Cache-Control: no-cache
+
+# 图标等静态资源可缓存一天
+/favicon.svg
+  Cache-Control: public, max-age=86400
