@@ -171,6 +171,7 @@ textarea.note:focus{border-color:var(--acc)}
 .legend i{display:inline-block;width:18px;height:2px;background:var(--acc);vertical-align:middle;margin-right:6px}
 .legend i.bar{height:8px;width:8px;background:var(--tx3)}
 .legend i.dash{height:0;border-top:1px dashed var(--acc);background:none}
+.legend i.fit{height:0;border-top:1px dashed var(--tx2);background:none}
 
 .fc-wrap{padding:16px 18px}
 .fc-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -329,7 +330,7 @@ footer a:hover{color:var(--acc)}
     <div class="card">
       <div class="card-hd"><span>▸ 完成率 × 成绩趋势 TREND</span><span>Day 0 → Now</span></div>
       <div class="chart-box"><svg id="chart" viewBox="0 0 900 260" preserveAspectRatio="xMidYMid meet"></svg></div>
-      <div class="legend"><span><i class="bar"></i>每日完成率</span><span><i></i>体前屈成绩(cm, 越低越好)</span><span id="lg-fc"><i class="dash"></i>预期</span></div>
+      <div class="legend"><span><i class="bar"></i>每日完成率</span><span><i></i>体前屈成绩(cm, 越低越好)</span><span id="lg-fc"><i class="dash"></i>预期</span><span id="lg-fit" class="hidden"><i class="fit"></i>实测拟合</span></div>
     </div>
   </section>
 
@@ -376,7 +377,8 @@ const REFS=[
  {t:"Comparison of post-isometric relaxation and active static stretching in improving hamstring flexibility among allied health sciences students: a randomized controlled trial",d:"10.1038/s41598-026-52130-5"}
 ];
 
-const TIERS={fast:{weeks:8,label:"乐观"},mid:{weeks:12,label:"基准"},slow:{weeks:17,label:"保守"}};
+const TIERS={fast:{weeks:8,p:1.8,label:"乐观"},mid:{weeks:12,p:1.6,label:"基准"},slow:{weeks:17,p:1.4,label:"保守"}};
+const FIT_P=1.6;
 
 // ---- 节拍器（每秒一声，方便默念数数）----
 const BEAT_ORDER=["off","bell","tick","wood"];
@@ -581,16 +583,35 @@ function renderOverview(){
     '<div class="ov-cell"><b>'+(best===null?"—":best)+'</b><span>历史最佳 cm</span><div class="sub">'+(best!==null&&best<=0?"🏁 已摸地！":best!==null?"还差 "+best+" cm":"—")+'</div></div>';
   drawChart(dates);renderForecast();
 }
+function fitCurve(){
+  const B=store.meta.baseline;
+  if(B==null)return null;
+  const dates=sortedDates().filter(dt=>store.days[dt].score!==null);
+  if(dates.length<2)return null;
+  const pts=dates.map(dt=>({t:dayIndex(dt),s:store.days[dt].score}));
+  let best=null,bestErr=Infinity;
+  for(let T=5;T<=600;T++){
+    let err=0,ok=true;
+    for(const p of pts){
+      if(p.t>=T){ok=false;break}
+      const pred=B*Math.pow(1-p.t/T,FIT_P);
+      err+=(p.s-pred)*(p.s-pred);
+    }
+    if(ok&&err<bestErr){bestErr=err;best=T}
+  }
+  return best?{T:best,n:pts.length}:null;
+}
 function drawChart(dates){
   const svg=document.getElementById("chart");
   const css=getComputedStyle(html);
-  const line=css.getPropertyValue("--line2").trim(),tx3=css.getPropertyValue("--tx3").trim(),acc=css.getPropertyValue("--acc").trim();
+  const line=css.getPropertyValue("--line2").trim(),tx2=css.getPropertyValue("--tx2").trim(),tx3=css.getPropertyValue("--tx3").trim(),acc=css.getPropertyValue("--acc").trim();
   const meta=store.meta||{};
   const tier=TIERS[meta.tier]||TIERS.mid;
   const B=meta.baseline;
   if(!dates.length&&B==null){svg.innerHTML='<text x="450" y="130" text-anchor="middle" fill="'+tx3+'" font-size="14" font-family="monospace">NO DATA YET</text>';return}
   const W=900,H=260,P=34,n=dates.length;
-  const fcEnd=B!=null?Math.max(n,TIERS.slow.weeks*7):n;
+  const fit=fitCurve();
+  const fcEnd=B!=null?Math.max(n,TIERS.slow.weeks*7,fit?Math.ceil(fit.T):0):n;
   const denom=Math.max(1,fcEnd-1);
   const xs=i=>P+(fcEnd===1?(W-2*P)/2:i*(W-2*P)/denom);
   const valid=dates.map(dt=>store.days[dt].score).filter(v=>v!==null);
@@ -607,13 +628,22 @@ function drawChart(dates){
   });
   let fc="";
   if(B!=null){
-    const rate=B/(tier.weeks*7);
+    const T=tier.weeks*7;
     let p="";
     for(let i=0;i<=fcEnd;i++){
-      const ev=Math.max(0,B-rate*i);
+      const ev=i>=T?0:B*Math.pow(Math.max(0,1-i/T),tier.p);
       p+=(i===0?"M":"L")+xs(i).toFixed(1)+" "+ys(ev).toFixed(1)+" ";
     }
     fc='<path d="'+p+'" fill="none" stroke="'+acc+'" stroke-dasharray="6 5" stroke-width="1.5" opacity=".75"/>';
+  }
+  let fitSvg="";
+  if(fit){
+    let p="";
+    for(let i=0;i<=Math.min(fcEnd,fit.T);i++){
+      const ev=B*Math.pow(Math.max(0,1-i/fit.T),FIT_P);
+      p+=(i===0?"M":"L")+xs(i).toFixed(1)+" "+ys(ev).toFixed(1)+" ";
+    }
+    fitSvg='<path d="'+p+'" fill="none" stroke="'+tx2+'" stroke-width="1.5" stroke-dasharray="2 3" opacity=".95"/>';
   }
   const sc=dates.map(dt=>store.days[dt].score);
   let lineSvg="";
@@ -633,7 +663,7 @@ function drawChart(dates){
     const s=String(i).padStart(3,"0");
     return '<text x="'+x.toFixed(1)+'" y="'+(H-23)+'" text-anchor="middle" fill="'+tx3+'" font-size="7" font-family="monospace">'+s.split("").map((ch,j)=>'<tspan x="'+x.toFixed(1)+'" dy="'+(j===0?0:7)+'">'+ch+'</tspan>').join("")+'</text>';
   }).join("");
-  svg.innerHTML='<line x1="'+P+'" y1="'+(H-P)+'" x2="'+(W-P)+'" y2="'+(H-P)+'" stroke="'+line+'"/>'+cells+lineSvg+fc+labels;
+  svg.innerHTML='<line x1="'+P+'" y1="'+(H-P)+'" x2="'+(W-P)+'" y2="'+(H-P)+'" stroke="'+line+'"/>'+cells+lineSvg+fc+fitSvg+labels;
 }
 function ensureBaseline(){
   const s=sortedDates().filter(dt=>store.days[dt].score!==null);
@@ -651,6 +681,8 @@ function renderForecast(){
   const elB=document.getElementById("fc-baseline");
   const diff=document.getElementById("fc-diff");
   const st=document.getElementById("fc-status");
+  const fit=fitCurve();
+  document.getElementById("lg-fit").classList.toggle("hidden",!fit);
   document.getElementById("lg-fc").innerHTML='<i class="dash"></i>预期 · '+tier.label+'档';
   elB.textContent=meta.baseline==null?"--":meta.baseline;
   document.querySelectorAll(".fc-tier").forEach(b=>b.classList.toggle("on",b.dataset.tier===meta.tier));
@@ -669,15 +701,21 @@ function renderForecast(){
   }
   const dt=sc[sc.length-1],idx=dayIndex(dt),cur=store.days[dt].score;
   if(cur<=0){diff.textContent="🏁 已触地";st.innerHTML='Day <b>'+idx+'</b> 实际 <b>'+cur+' cm</b> · 🏁 <b>已触地！</b>';return}
-  const rate=B/(tier.weeks*7);
-  const exp=Math.max(0,B-rate*idx);
+  const T=tier.weeks*7;
+  const exp=Math.max(0,B*Math.pow(Math.max(0,1-idx/T),tier.p));
   const gap=exp-cur;
-  const daysLeft=Math.ceil(Math.max(0,cur)/rate);
+  const tCur=T*Math.pow(Math.max(0,cur/B),1/tier.p);
+  const daysLeft=Math.max(0,Math.ceil(tCur-idx));
   const weeksLeft=Math.ceil(daysLeft/7);
   const tag=gap>0.5?("领先预期 "+gap.toFixed(1)+" cm"):gap< -0.5?("落后预期 "+(-gap).toFixed(1)+" cm"):"符合预期";
   diff.textContent=tag;
-  st.innerHTML='Day <b>'+idx+'</b> 实际 <b>'+cur+' cm</b> · 本档预期 <b>'+exp.toFixed(1)+' cm</b> · <b>'+tag+'</b>'+
+  let html='Day <b>'+idx+'</b> 实际 <b>'+cur+' cm</b> · 本档预期 <b>'+exp.toFixed(1)+' cm</b> · <b>'+tag+'</b>'+
     '<br>按当前进度，预计还需 <b>约 '+weeksLeft+' 周</b>（'+daysLeft+' 个训练日）触地';
+  if(fit){
+    const fitLeft=Math.max(0,Math.ceil(fit.T-idx));
+    html+='<br>实测拟合：约 <b>'+Math.ceil(fitLeft/7)+' 周</b>触地（'+fit.n+' 个样本）';
+  }
+  st.innerHTML=html;
 }
 function renderSide(){renderHistory();renderOverview()}
 
