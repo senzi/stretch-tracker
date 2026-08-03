@@ -378,7 +378,8 @@ const REFS=[
 ];
 
 const TIERS={fast:{weeks:8,p:1.8,label:"乐观"},mid:{weeks:12,p:1.6,label:"基准"},slow:{weeks:17,p:1.4,label:"保守"}};
-const FIT_P=1.6;
+const FIT_P=2.2;
+const FIT_MIN_T=42;
 
 // ---- 节拍器（每秒一声，方便默念数数）----
 const BEAT_ORDER=["off","bell","tick","wood"];
@@ -590,7 +591,7 @@ function fitCurve(){
   if(dates.length<2)return null;
   const pts=dates.map(dt=>({t:dayIndex(dt),s:store.days[dt].score}));
   let best=null,bestErr=Infinity;
-  for(let T=5;T<=600;T++){
+  for(let T=FIT_MIN_T;T<=600;T++){
     let err=0,ok=true;
     for(const p of pts){
       if(p.t>=T){ok=false;break}
