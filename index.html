@@ -776,6 +776,23 @@ document.getElementById("refs-close").onclick=closeRefs;
 document.getElementById("refs-modal").onclick=e=>{if(e.target.id==="refs-modal")closeRefs()};
 
 renderToday();renderSide();
+
+// ---- 跨日自动刷新（北京时间）----
+function bjDateStr(){
+  return new Date(new Date().getTime()+8*3600*1000).toISOString().slice(0,10);
+}
+const LOADED_BJ_DATE=bjDateStr();
+function scheduleMidnightRefresh(){
+  const now=new Date();
+  const bj=new Date(now.getTime()+8*3600*1000);
+  const nextBjMidnight=new Date(Date.UTC(bj.getUTCFullYear(),bj.getUTCMonth(),bj.getUTCDate()+1)-8*3600*1000);
+  const wait=Math.max(1000,nextBjMidnight.getTime()-now.getTime()+1000);
+  setTimeout(()=>location.reload(),wait);
+}
+scheduleMidnightRefresh();
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden&&bjDateStr()!==LOADED_BJ_DATE)location.reload();
+});
 </script>
 </body>
 </html>
