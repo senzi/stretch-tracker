@@ -729,10 +729,28 @@ document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
 });
 
 document.getElementById("btn-export").onclick=()=>{
-  const blob=new Blob([JSON.stringify({app:"FLEX//OS",version:1,exported:new Date().toISOString(),data:store},null,2)],{type:"application/json"});
+  const payload={
+    app:"FLEX//OS",version:2,exported:new Date().toISOString(),
+    _context:{
+      what:"这是一份「FLEX//OS · 摸到地板 12周柔韧性训练」打卡与体前屈成绩跟踪数据",
+      goal:"用户每天约15分钟柔韧性训练（每周至少自测一次成绩），最终目标：站姿体前屈指尖触地（成绩 = 0 cm）",
+      training_plan:"12周计划：静态拉伸30秒×3组、PNF收缩-放松、每周每部位约10分钟为最优剂量（Ingram 2024系统综述）。成绩为指尖离地距离（cm），数值越小越好，0=已触地；仅记正数（负数输入会自动转正）。训练日按有记录日期升序编号 D0/D1/D2…",
+      fields:{
+        "data.days":"按日期(YYYY-MM-DD)索引的每日训练记录",
+        "days[].checks":"6个动作完成标记数组(长度6,true=已完成)，顺序：[热身激活, 动态摆腿, 站姿体前屈, 坐姿单腿前屈, 仰卧毛巾抱腿PNF, 婴儿式放松]",
+        "days[].score":"当日体前屈成绩(cm，指尖离地距离)；null=当日未测量；越小越好，0=触地",
+        "days[].note":"当日训练感受备注(可为空)",
+        "data.meta.baseline":"起始基线(第一次测量成绩，系统自动取，不可修改)",
+        "data.meta.tier":"预期档位：fast=乐观8周 / mid=基准12周 / slow=保守17周(幂函数曲线，前快后慢)"
+      },
+      analysis_prompt:"请基于以上数据帮我分析：1)训练习惯(完成率/连续天数)；2)柔韧性进展趋势(进步速率、是否出现放缓)；3)距目标0cm还差多少、按当前速率预计还需多久触地；4)给出可执行的改进建议。数据为准，注意训练日索引从0开始。"
+    },
+    data:store
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);
   a.download="flexos-backup-"+todayStr()+".json";a.click();
-  toast("已导出备份 JSON");
+  toast("已导出备份 JSON（含 AI 说明）");
 };
 document.getElementById("btn-import").onclick=()=>document.getElementById("file-import").click();
 document.getElementById("file-import").onchange=e=>{
