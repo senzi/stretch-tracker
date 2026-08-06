@@ -729,6 +729,39 @@ document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
 });
 
 document.getElementById("btn-export").onclick=()=>{
+  const dates=sortedDates();
+  const scDates=dates.filter(dt=>store.days[dt].score!==null);
+  const scores=scDates.map(dt=>store.days[dt].score);
+  const B=store.meta.baseline;
+  const cur=scores.length?scores[scores.length-1]:null;
+  const idx=cur!==null?dayIndex(scDates[scDates.length-1]):null;
+  const deltas=[];
+  for(let i=1;i<scores.length;i++)deltas.push({date:scDates[i],delta_cm:+(scores[i]-scores[i-1]).toFixed(1)});
+  let streak=0;const c=new Date();
+  if(!hasData(getDay(todayStr())))c.setDate(c.getDate()-1);
+  while(true){const k=dateStr(c);if(hasData(getDay(k))){streak++;c.setDate(c.getDate()-1)}else break}
+  const forecast={};
+  Object.keys(TIERS).forEach(k=>{
+    const t=TIERS[k],T=t.weeks*7;
+    const exp=(cur!==null&&B!=null)?Math.max(0,B*Math.pow(Math.max(0,1-idx/T),t.p)):null;
+    let rem=null;
+    if(cur!==null&&B!=null&&cur>0)rem=Math.max(0,Math.ceil(T*Math.pow(Math.max(0,cur/B),1/t.p)-idx));
+    forecast[k]={label:t.label,weeks:t.weeks,expected_cm:exp===null?null:+exp.toFixed(1),touchdown_in_days:T,remaining_days:rem,remaining_weeks:rem===null?null:Math.ceil(rem/7)};
+  });
+  const fit=fitCurve();
+  const stats={
+    total_training_days:dates.length,
+    full_days:dates.filter(dt=>completion(store.days[dt])===1).length,
+    streak_days:streak,
+    first_score:B,
+    latest_score:cur,
+    best_score:scores.length?Math.min.apply(null,scores):null,
+    progress_total_cm:(cur!==null&&B!=null)?+(B-cur).toFixed(1):null,
+    avg_progress_cm_per_day:(scores.length>1&&B!=null)?+((B-cur)/(scores.length-1)).toFixed(2):null,
+    daily_deltas:deltas,
+    fit:fit?{touchdown_in_days:fit.T,remaining_days:Math.max(0,Math.ceil(fit.T-idx)),remaining_weeks:Math.max(0,Math.ceil((fit.T-idx)/7)),samples:fit.n}:null,
+    forecast:forecast
+  };
   const payload={
     app:"FLEX//OS",version:2,exported:new Date().toISOString(),
     _context:{
@@ -741,16 +774,18 @@ document.getElementById("btn-export").onclick=()=>{
         "days[].score":"当日体前屈成绩(cm，指尖离地距离)；null=当日未测量；越小越好，0=触地",
         "days[].note":"当日训练感受备注(可为空)",
         "data.meta.baseline":"起始基线(第一次测量成绩，系统自动取，不可修改)",
-        "data.meta.tier":"预期档位：fast=乐观8周 / mid=基准12周 / slow=保守17周(幂函数曲线，前快后慢)"
+        "data.meta.tier":"预期档位：fast=乐观8周 / mid=基准12周 / slow=保守17周(幂函数曲线，前快后慢)",
+        "_stats":"派生统计(系统计算)：daily_deltas=逐日成绩差值(负=进步)；forecast=三档预期(expected_cm=当前训练日该档预期成绩, touchdown_in_days=该档总触地天数, remaining_days/weeks=预计剩余)；fit=实测拟合(幂函数p=2.2、触地时间下限42天)"
       },
       analysis_prompt:"请基于以上数据帮我分析：1)训练习惯(完成率/连续天数)；2)柔韧性进展趋势(进步速率、是否出现放缓)；3)距目标0cm还差多少、按当前速率预计还需多久触地；4)给出可执行的改进建议。数据为准，注意训练日索引从0开始。"
     },
+    _stats:stats,
     data:store
   };
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);
   a.download="flexos-backup-"+todayStr()+".json";a.click();
-  toast("已导出备份 JSON（含 AI 说明）");
+  toast("已导出备份 JSON（含 AI 说明与统计）");
 };
 document.getElementById("btn-import").onclick=()=>document.getElementById("file-import").click();
 document.getElementById("file-import").onchange=e=>{
