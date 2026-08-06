@@ -746,7 +746,7 @@ document.getElementById("btn-export").onclick=()=>{
     const exp=(cur!==null&&B!=null)?Math.max(0,B*Math.pow(Math.max(0,1-idx/T),t.p)):null;
     let rem=null;
     if(cur!==null&&B!=null&&cur>0)rem=Math.max(0,Math.ceil(T*Math.pow(Math.max(0,cur/B),1/t.p)-idx));
-    forecast[k]={label:t.label,weeks:t.weeks,expected_cm:exp===null?null:+exp.toFixed(1),touchdown_in_days:T,remaining_days:rem,remaining_weeks:rem===null?null:Math.ceil(rem/7)};
+    forecast[k]={label:t.label,weeks:t.weeks,curve_cm_at_now:exp===null?null:+exp.toFixed(1),ahead_of_curve_cm:(cur!==null&&exp!==null)?+(exp-cur).toFixed(1):null,touchdown_in_days:T,remaining_days:rem,remaining_weeks:rem===null?null:Math.ceil(rem/7)};
   });
   const fit=fitCurve();
   const stats={
@@ -768,6 +768,7 @@ document.getElementById("btn-export").onclick=()=>{
       what:"这是一份「FLEX//OS · 摸到地板 12周柔韧性训练」打卡与体前屈成绩跟踪数据",
       goal:"用户每天约15分钟柔韧性训练（每周至少自测一次成绩），最终目标：站姿体前屈指尖触地（成绩 = 0 cm）",
       training_plan:"12周计划：静态拉伸30秒×3组、PNF收缩-放松、每周每部位约10分钟为最优剂量（Ingram 2024系统综述）。成绩为指尖离地距离（cm），数值越小越好，0=已触地；仅记正数（负数输入会自动转正）。训练日按有记录日期升序编号 D0/D1/D2…",
+      disclaimer:"所有预测（三档曲线、实测拟合的时间字段）仅供参考，最终以实际测量趋势为准。",
       fields:{
         "data.days":"按日期(YYYY-MM-DD)索引的每日训练记录",
         "days[].checks":"6个动作完成标记数组(长度6,true=已完成)，顺序：[热身激活, 动态摆腿, 站姿体前屈, 坐姿单腿前屈, 仰卧毛巾抱腿PNF, 婴儿式放松]",
@@ -775,7 +776,7 @@ document.getElementById("btn-export").onclick=()=>{
         "days[].note":"当日训练感受备注(可为空)",
         "data.meta.baseline":"起始基线(第一次测量成绩，系统自动取，不可修改)",
         "data.meta.tier":"预期档位：fast=乐观8周 / mid=基准12周 / slow=保守17周(幂函数曲线，前快后慢)",
-        "_stats":"派生统计(系统计算)：daily_deltas=逐日成绩差值(负=进步)；forecast=三档预期(expected_cm=当前训练日该档预期成绩, touchdown_in_days=该档总触地天数, remaining_days/weeks=预计剩余)；fit=实测拟合(幂函数p=2.2、触地时间下限42天)"
+        "_stats":"派生统计(系统计算)：daily_deltas=逐日成绩差值(负=进步)；forecast=三档预期(注意：curve_cm_at_now=该档模型曲线在当前训练日的理论值，不是成绩预测，仅用于与实测对比；ahead_of_curve_cm=实测领先曲线多少cm，正=领先；touchdown_in_days=该档总触地天数, remaining_days/weeks=预测剩余时间，仅供参考)；fit=实测拟合(幂函数p=2.2、触地时间下限42天)"
       },
       analysis_prompt:"请基于以上数据帮我分析：1)训练习惯(完成率/连续天数)；2)柔韧性进展趋势(进步速率、是否出现放缓)；3)距目标0cm还差多少、按当前速率预计还需多久触地；4)给出可执行的改进建议。数据为准，注意训练日索引从0开始。"
     },
