@@ -196,28 +196,12 @@ textarea.note:focus{border-color:var(--acc)}
   position:fixed;inset:0;z-index:98;display:none;align-items:center;justify-content:center;
   background:rgba(0,0,0,.55);
 }
-#refs-modal{
-  position:fixed;inset:0;z-index:97;display:none;align-items:center;justify-content:center;
-  background:rgba(0,0,0,.55);padding:20px;
-}
 [data-theme="light"] #celebrate{background:rgba(255,255,255,.6)}
-[data-theme="light"] #refs-modal{background:rgba(255,255,255,.6)}
-#celebrate.show,#refs-modal.show{display:flex;animation:fadein .3s}
+#celebrate.show{display:flex;animation:fadein .3s}
 @keyframes fadein{from{opacity:0}}
 .cel-box{border:1px solid var(--acc);background:var(--bg2);padding:44px 60px;text-align:center;box-shadow:0 0 60px var(--glow)}
 .cel-box h2{font-family:var(--font-disp);font-size:34px;letter-spacing:.06em;margin-bottom:10px}
 .cel-box p{font-size:12px;color:var(--tx2);letter-spacing:.12em;margin-bottom:22px}
-.refs-box{width:min(640px,100%);max-height:70vh;display:flex;flex-direction:column;border:1px solid var(--line2);background:var(--bg2);box-shadow:0 0 60px var(--glow)}
-.refs-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.22em;color:var(--tx2);text-transform:uppercase}
-.refs-hd .btn{padding:5px 10px;font-size:10px}
-.refs-list{overflow-y:auto;padding:6px 0}
-.ref{display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
-.ref:last-child{border-bottom:none}
-.ref-idx{flex:none;font-size:10px;color:var(--tx3);letter-spacing:.1em;margin-top:3px;width:22px}
-.ref-body{flex:1;min-width:0}
-.ref-title{font-size:12px;line-height:1.5;color:var(--tx)}
-.ref-doi{display:block;margin-top:4px;font-size:10px;color:var(--tx3);letter-spacing:.05em;text-decoration:none;word-break:break-all}
-.ref-doi:hover{color:var(--acc);text-decoration:underline}
 footer{text-align:center;font-size:10px;color:var(--tx3);letter-spacing:.24em;margin-top:56px;text-transform:uppercase;line-height:2}
 footer a{color:var(--tx3);text-decoration:none;transition:color .18s}
 footer a:hover{color:var(--acc)}
@@ -248,7 +232,7 @@ footer a:hover{color:var(--acc)}
     <div class="hd-sp"></div>
     <button class="btn" id="btn-theme">◐ 昼夜</button>
     <button class="btn" id="btn-beat" title="点击开关节拍 · 循环切换音效">♪ 关</button>
-    <button class="btn" id="btn-refs">▤ 文献</button>
+    <a class="btn" href="references.html" target="_blank" rel="noopener" title="证据与文献（新页面）">▤ 文献</a>
     <button class="btn" id="btn-export">⇩ 导出</button>
     <button class="btn" id="btn-import">⇧ 导入</button>
     <input type="file" id="file-import" accept=".json,application/json" class="hidden">
@@ -338,12 +322,6 @@ footer a:hover{color:var(--acc)}
 </div>
 
 <div id="toast"></div>
-<div id="refs-modal">
-  <div class="refs-box">
-    <div class="refs-hd"><span>▸ 参考文献 REFERENCES</span><button class="btn" id="refs-close">✕</button></div>
-    <div class="refs-list" id="refs-list"></div>
-  </div>
-</div>
 <div id="celebrate">
   <div class="cel-box">
     <h2>100% COMPLETE</h2>
@@ -367,14 +345,9 @@ const FOGG=[
  "动机：今天每勾一项，地板就近一点。",
  "能力：只需15分钟——比刷一集短剧还快。",
  "红线：牵拉感 ✅ 刺痛 ❌ · 绝不反弹式下压。",
- "庆祝：完成全部6项后，给自己一个明确的「搞定！」"
-];
-const REFS=[
- {t:"Optimising the Dose of Static Stretching to Improve Flexibility: A Systematic Review, Meta-analysis and Multivariate Meta-regression",d:"10.1007/s40279-024-02143-9"},
- {t:"The Effect of Time and Frequency of Static Stretching on Flexibility of the Hamstring Muscles",d:"10.1093/ptj/77.10.1090"},
- {t:"Acute changes in hamstring flexibility: PNF versus static stretch in senior athletes",d:"10.1054/ptsp.2001.0076"},
- {t:"The Effectiveness of PNF Versus Static Stretching on Increasing Hip-Flexion Range of Motion",d:"10.1123/jsr.2016-0098"},
- {t:"Comparison of post-isometric relaxation and active static stretching in improving hamstring flexibility among allied health sciences students: a randomized controlled trial",d:"10.1038/s41598-026-52130-5"}
+ "庆祝：完成全部6项后，给自己一个明确的「搞定！」",
+ "证据：平台期可以换方法——静态↔PNF↔动态互换，效果不打折。",
+ "加餐：每周2-3次下肢抗阻（靠墙静蹲/北欧弯举）也能直接增柔韧性。"
 ];
 
 const TIERS={fast:{weeks:8,p:1.8,label:"乐观"},mid:{weeks:12,p:1.6,label:"基准"},slow:{weeks:17,p:1.4,label:"保守"}};
@@ -817,17 +790,6 @@ document.getElementById("file-import").onchange=e=>{
 document.querySelectorAll(".fc-tier").forEach(b=>b.onclick=()=>{
   store.meta=store.meta||{};store.meta.tier=b.dataset.tier;save();renderOverview();
 });
-
-function openRefs(){
-  document.getElementById("refs-list").innerHTML=REFS.map((r,i)=>
-    '<div class="ref"><div class="ref-idx">0'+(i+1)+'</div><div class="ref-body"><div class="ref-title">'+r.t+'</div>'+
-    '<a class="ref-doi" href="https://doi.org/'+r.d+'" target="_blank" rel="noopener">'+r.d+'</a></div></div>').join("");
-  document.getElementById("refs-modal").classList.add("show");
-}
-function closeRefs(){document.getElementById("refs-modal").classList.remove("show")}
-document.getElementById("btn-refs").onclick=openRefs;
-document.getElementById("refs-close").onclick=closeRefs;
-document.getElementById("refs-modal").onclick=e=>{if(e.target.id==="refs-modal")closeRefs()};
 
 renderToday();renderSide();
 
