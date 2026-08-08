@@ -175,6 +175,13 @@ const ACTIONS=[
 ];
 const LIMITS="检索覆盖 PubMed 英文文献，CNKI/Wanfang 未纳入；损伤风险主题的经典综述（Thacker 2004、Behm 2016 等）未被本轮检索式充分捕获；Ingram「每周10分钟」溯源未完全闭环；被引数据为 OpenAlex 快照；结论强度标注基于本报告评分卡，非 GRADE 官方评级。";
 
+const html=document.documentElement;
+html.dataset.theme=localStorage.getItem("flexplan.theme")||"dark";
+document.getElementById("btn-theme").onclick=()=>{
+  html.dataset.theme=html.dataset.theme==="dark"?"light":"dark";
+  localStorage.setItem("flexplan.theme",html.dataset.theme);
+};
+
 document.getElementById("verdicts").innerHTML=VERDICTS.map(v=>
   '<div class="v-cell"><div class="v-top"><span class="v-mark">'+v.mark+'</span><span class="v-tag">'+v.tag+'</span></div><div class="v-q">'+v.q+'</div><div class="v-c">'+v.c+'</div></div>').join("");
 document.getElementById("core-refs").innerHTML=CORE.map((r,i)=>
@@ -187,11 +194,6 @@ document.getElementById("ev-refs").innerHTML=EV.map((r,i)=>
 document.getElementById("actions").innerHTML=ACTIONS.map((a,i)=>
   '<div class="sug"><div class="n">'+(i+1)+'</div><div>'+a+'</div></div>').join("");
 document.getElementById("limits").textContent=LIMITS;
-
-document.getElementById("btn-theme")&&(document.getElementById("btn-theme").onclick=()=>{
-  const html=document.documentElement;
-  html.dataset.theme=html.dataset.theme==="dark"?"light":"dark";
-});
 </script>
 </body>
 </html>
